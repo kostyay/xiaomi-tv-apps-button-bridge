@@ -61,6 +61,27 @@ Install JDK 17 and Android SDK Platform 36. Then run:
 
 The APK is at `app/build/outputs/apk/debug/app-debug.apk`.
 
+## Releases
+
+This project uses [Semantic Versioning](https://semver.org/). Release tags must
+use the form `vMAJOR.MINOR.PATCH`, such as `v2.1.0`. A published GitHub Release
+starts a workflow that:
+
+1. Validates the tag.
+2. Runs Kotlin lint, Android lint, and unit tests.
+3. Builds and verifies a signed release APK.
+4. Adds the APK and its SHA-256 checksum to the GitHub Release.
+
+Create a release with GitHub CLI:
+
+```sh
+gh release create v2.1.0 --generate-notes --title v2.1.0
+```
+
+Release signing uses the `RELEASE_KEYSTORE_BASE64`, `RELEASE_STORE_PASSWORD`,
+`RELEASE_KEY_ALIAS`, and `RELEASE_KEY_PASSWORD` repository secrets. Never add
+the signing key to Git.
+
 ## How it works
 
 The service connects to `127.0.0.1:5555` and runs `getevent` as the authorized
