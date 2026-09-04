@@ -28,6 +28,7 @@ class BridgeService : Service() {
     private val output = StringBuilder()
     @Volatile private var stopped = false
     @Volatile private var testMode = false
+    @Volatile private var captureMode = false
     @Volatile private var listener: AutoCloseable? = null
 
     override fun onCreate() {
@@ -43,7 +44,13 @@ class BridgeService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_TEST) {
             testMode = true
-            updateStatus("Test mode: press the Apps button")
+            updateStatus("Test mode: press a mapped button")
+        } else if (intent?.action == ACTION_CAPTURE) {
+            captureMode = true
+            updateStatus("Press the remote button to map")
+        } else if (intent?.action == ACTION_CANCEL_CAPTURE) {
+            captureMode = false
+            updateStatus("Key capture canceled")
         }
         return START_STICKY
     }
@@ -64,8 +71,8 @@ class BridgeService : Service() {
             try {
                 Kadb.create("127.0.0.1", 5555, connectTimeout = 5_000).use { adb ->
                     adb.shell("true")
-                    updateStatus("Working: Apps opens the selected target", true)
-                    adb.openShell("exec getevent -l /dev/input/event7").use { shell ->
+                    updateStatus("Working: ${loadMappings().size} key mapping(s)", true)
+                    adb.openShell("exec getevent -lt | grep ' EV_KEY '").use { shell ->
                         listener = shell
                         while (!stopped) {
                             when (val packet = shell.read()) {
@@ -97,36 +104,36 @@ class BridgeService : Service() {
         while (newline >= 0) {
             val line = output.substring(0, newline)
             output.delete(0, newline + 1)
-            if (line.contains("EV_KEY") && line.contains("KEY_CHAT") && line.contains("DOWN")) {
-                onAppsButton()
-            }
+            KEY_EVENT.find(line)?.groupValues?.get(1)?.let(::onKey)
             newline = output.indexOf("\n")
         }
     }
 
-    private fun onAppsButton() {
-        if (testMode) {
-            testMode = false
-            updateStatus("OK: Apps button detected", true)
+    private fun onKey(key: String) {
+        if (captureMode) {
+            captureMode = false
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(CAPTURED_KEY, key).apply()
+            updateStatus("Detected $key", true)
         } else {
-            updateStatus("Working: Apps opens the selected target", true)
-            controller.execute(::openTarget)
+            val mapping = loadMappings().firstOrNull { it.key == key } ?: return
+            if (!testMode) {
+                controller.execute { runAction(key, mapping) }
+                return
+            }
+            testMode = false
+            updateStatus("OK: $key detected", true)
         }
     }
 
-    private fun openTarget() {
-        val target = getSharedPreferences(PREFS, MODE_PRIVATE).getString(TARGET, DEFAULT_TARGET)
-        val command = when {
-            target == DEFAULT_TARGET ->
-                "am start -a tv.projectivy.ALL_APPS -c android.intent.category.DEFAULT"
-            target?.matches(Regex("[A-Za-z0-9._]+")) == true ->
-                "monkey -p $target -c android.intent.category.LEANBACK_LAUNCHER 1"
-            else -> return
-        }
+    private fun runAction(key: String, mapping: KeyMapping) {
+        val command = mapping.command() ?: return
         runCatching {
-            Kadb.create("127.0.0.1", 5555, connectTimeout = 5_000).use { it.shell(command) }
+            Kadb.create("127.0.0.1", 5555, connectTimeout = 5_000).use { adb ->
+                adb.shell(command)
+            }
+            updateStatus("Ran mapping for $key", true)
         }.onFailure {
-            updateStatus("Target did not open: ${it.javaClass.simpleName}", true)
+            updateStatus("Action failed: ${it.javaClass.simpleName}", true)
         }
     }
 
@@ -140,7 +147,7 @@ class BridgeService : Service() {
 
     private fun createChannel() {
         getSystemService(NotificationManager::class.java).createNotificationChannel(
-            NotificationChannel(CHANNEL_ID, "Apps button bridge", NotificationManager.IMPORTANCE_LOW)
+            NotificationChannel(CHANNEL_ID, "TV Key Mapper", NotificationManager.IMPORTANCE_LOW)
         )
     }
 
@@ -153,7 +160,7 @@ class BridgeService : Service() {
         )
         return Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_manage)
-            .setContentTitle("Xiaomi Apps Button Bridge")
+            .setContentTitle("TV Key Mapper")
             .setContentText(text)
             .setContentIntent(open)
             .setOngoing(true)
@@ -162,14 +169,17 @@ class BridgeService : Service() {
 
     companion object {
         const val ACTION_TEST = "com.kostyay.xiaomiappsbridge.TEST"
+        const val ACTION_CAPTURE = "com.kostyay.xiaomiappsbridge.CAPTURE"
+        const val ACTION_CANCEL_CAPTURE = "com.kostyay.xiaomiappsbridge.CANCEL_CAPTURE"
         const val ACTION_STATUS = "com.kostyay.xiaomiappsbridge.STATUS"
         const val PREFS = "bridge"
         const val STATUS = "status"
         const val ADB_CONNECTED = "adb_connected"
-        const val TARGET = "target"
-        const val DEFAULT_TARGET = "projectivy_apps"
+        const val CAPTURED_KEY = "captured_key"
+        const val MAPPINGS = "mappings"
         private const val CHANNEL_ID = "bridge"
         private const val NOTIFICATION_ID = 1
+        private val KEY_EVENT = Regex("EV_KEY\\s+((?:KEY|BTN)_[A-Z0-9_]+)\\s+DOWN")
 
         fun intent(context: Context) = Intent(context, BridgeService::class.java)
     }

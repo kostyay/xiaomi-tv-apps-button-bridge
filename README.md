@@ -1,23 +1,29 @@
-# Xiaomi TV Apps Button Bridge
+# TV Key Mapper
 
-This small Android TV app maps the Xiaomi remote **Apps** button to the
-Projectivy Launcher apps panel. It has an ADB client in the app and starts
-again after the TV starts.
+This Android TV app maps remote-control keys to apps and Android intents. It
+has an ADB client in the app and starts again after the TV starts.
 
 ![Bridge connected](docs/main-screen.png)
 
-The screen shows the ADB connection state. **Choose target** can map the button
-to any installed Android TV app. Projectivy's apps panel is the default target.
-**Test Apps button** waits for one press and shows a clear result without
-opening the target.
+The screen shows the ADB connection state. Open **Key mappings**, capture a
+remote key, and select an installed TV app or a common Android action. The
+default mapping is `KEY_CHAT` (the Xiaomi Apps button) to the Projectivy apps
+panel. **Test a mapped button** waits for one press and shows a result without
+opening its action.
 
-![Apps button test passed](docs/test-ok.png)
+![Key mapping settings](docs/key-mappings.png)
+
+Advanced users can enter a custom Android intent action, data URI, or exported
+component. Android does not provide one complete list of intents. The app lists
+installed TV apps and useful system settings to help users find actions. An
+app's developer documentation is the best source for its deep links and custom
+actions.
 
 It is made for this tested configuration:
 
 - Xiaomi Mi TV model `MiTV-AFMU0` (`twilight`)
 - Android TV 14
-- Xiaomi Apps button: `/dev/input/event7`, `KEY_CHAT`
+- Xiaomi Apps button: `KEY_CHAT`
 - Projectivy Launcher package: `com.spocky.projengmenu`
 
 ## Install
@@ -31,7 +37,7 @@ It is made for this tested configuration:
    adb install XiaomiAppsButtonBridge.apk
    ```
 
-4. Open **Xiaomi Apps Button Bridge** on the TV.
+4. Open **TV Key Mapper** on the TV.
 5. When the TV shows an ADB authorization message, select **Always allow** and
    then select **Allow**.
 
@@ -54,11 +60,13 @@ The APK is at `app/build/outputs/apk/debug/app-debug.apk`.
 ## How it works
 
 The service connects to `127.0.0.1:5555` and runs `getevent` as the authorized
-ADB shell user. When it reads a `KEY_CHAT` press, it starts the selected target.
-The default Projectivy target uses the `tv.projectivy.ALL_APPS` action.
+ADB shell user. It filters the stream to key events. When it reads a configured
+key, it runs the selected action. The default Projectivy target uses the
+`tv.projectivy.ALL_APPS` action.
 
-This app is hardware-specific. A different TV can use a different input device
-or key code.
+This method observes input events but does not block the original TV action.
+Some mapped buttons can therefore do both the original action and the mapped
+action. A different TV can also report different key names.
 
 ## License
 

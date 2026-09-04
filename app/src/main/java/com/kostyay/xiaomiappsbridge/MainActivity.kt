@@ -2,7 +2,6 @@ package com.kostyay.xiaomiappsbridge
 
 import android.Manifest
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -22,7 +21,7 @@ import android.widget.TextView
 class MainActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var adbStatus: TextView
-    private lateinit var target: TextView
+    private lateinit var mappingCount: TextView
     private val statusReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) = refreshStatus()
     }
@@ -30,40 +29,42 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        status = label("Starting", 27f, Typeface.BOLD)
-        adbStatus = label("●  ADB DISCONNECTED", 17f, Typeface.BOLD)
-        target = label(targetLabel(), 19f)
+        status = label("Starting", 23f, Typeface.BOLD)
+        adbStatus = label("●  ADB DISCONNECTED", 15f, Typeface.BOLD)
+        mappingCount = label(mappingCountLabel(), 17f)
 
         val statePanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.START
             setPadding(52, 48, 52, 48)
             background = panel(CARD)
-            addView(label("REMOTE BRIDGE", 16f, Typeface.BOLD).apply {
+            addView(label("REMOTE BRIDGE", 14f, Typeface.BOLD).apply {
                 setTextColor(ORANGE)
                 letterSpacing = 0.16f
             })
-            addView(label("Apps button", 43f, Typeface.BOLD), margins(top = 18))
+            addView(label("TV Key Mapper", 34f, Typeface.BOLD), margins(top = 18))
             addView(status, margins(top = 24))
             addView(adbStatus, margins(top = 28))
             addView(View(this@MainActivity), LinearLayout.LayoutParams(1, 0, 1f))
-            addView(label("CURRENT TARGET", 14f, Typeface.BOLD).apply {
+            addView(label("KEY MAPPINGS", 12f, Typeface.BOLD).apply {
                 setTextColor(MUTED)
                 letterSpacing = 0.12f
             })
-            addView(target, margins(top = 10))
+            addView(mappingCount, margins(top = 10))
         }
 
         val controls = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(54, 36, 54, 36)
-            addView(label("Controls", 34f, Typeface.BOLD))
-            addView(label("Choose what opens, then test the remote button.", 18f).apply {
+            addView(label("Controls", 28f, Typeface.BOLD))
+            addView(label("Choose a remote key and what it must open.", 16f).apply {
                 setTextColor(MUTED)
             }, margins(top = 8, bottom = 30))
-            addView(actionButton("Choose target", ::chooseTarget))
-            addView(actionButton("Test Apps button") { startBridge(BridgeService.ACTION_TEST) }, margins(top = 16))
+            addView(actionButton("Key mappings") {
+                startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
+            })
+            addView(actionButton("Test a mapped button") { startBridge(BridgeService.ACTION_TEST) }, margins(top = 16))
             addView(LinearLayout(this@MainActivity).apply {
                 orientation = LinearLayout.HORIZONTAL
                 addView(actionButton("Start bridge") { startBridge() }, LinearLayout.LayoutParams(0, 82, 1f))
@@ -95,32 +96,12 @@ class MainActivity : Activity() {
     override fun onStart() {
         super.onStart()
         registerReceiver(statusReceiver, IntentFilter(BridgeService.ACTION_STATUS), RECEIVER_NOT_EXPORTED)
+        mappingCount.text = mappingCountLabel()
     }
 
     override fun onStop() {
         unregisterReceiver(statusReceiver)
         super.onStop()
-    }
-
-    private fun chooseTarget() {
-        val launchIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
-        val apps = packageManager.queryIntentActivities(launchIntent, 0)
-            .filter { it.activityInfo.packageName != packageName }
-            .map { it.loadLabel(packageManager).toString() to it.activityInfo.packageName }
-            .distinctBy { it.second }
-            .sortedBy { it.first.lowercase() }
-        val choices = listOf("Projectivy apps panel" to BridgeService.DEFAULT_TARGET) + apps
-
-        AlertDialog.Builder(this)
-            .setTitle("Open with the Apps button")
-            .setItems(choices.map { it.first }.toTypedArray()) { dialog, which ->
-                getSharedPreferences(BridgeService.PREFS, MODE_PRIVATE)
-                    .edit().putString(BridgeService.TARGET, choices[which].second).apply()
-                target.text = choices[which].first
-                dialog.dismiss()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
     }
 
     private fun refreshStatus() {
@@ -134,14 +115,7 @@ class MainActivity : Activity() {
         adbStatus.setTextColor(if (connected) MINT else AMBER)
     }
 
-    private fun targetLabel(): String {
-        val selected = getSharedPreferences(BridgeService.PREFS, MODE_PRIVATE)
-            .getString(BridgeService.TARGET, BridgeService.DEFAULT_TARGET)
-        if (selected == BridgeService.DEFAULT_TARGET) return "Projectivy apps panel"
-        return runCatching {
-            packageManager.getApplicationLabel(packageManager.getApplicationInfo(selected!!, 0)).toString()
-        }.getOrDefault(selected ?: "Not selected")
-    }
+    private fun mappingCountLabel() = "${loadMappings().size} configured"
 
     private fun label(value: String, size: Float, style: Int = Typeface.NORMAL) = TextView(this).apply {
         text = value
@@ -152,7 +126,7 @@ class MainActivity : Activity() {
 
     private fun actionButton(label: String, action: () -> Unit) = Button(this).apply {
         text = label
-        textSize = 19f
+        textSize = 17f
         isAllCaps = false
         setTextColor(TEXT)
         typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
