@@ -2,3 +2,4 @@
 .kotlin/
 local.properties
 **/build/
+output/
