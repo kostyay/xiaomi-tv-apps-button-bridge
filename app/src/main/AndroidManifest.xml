@@ -18,6 +18,8 @@
     <application
         android:allowBackup="false"
         android:banner="@drawable/tv_banner"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="false"
         android:icon="@drawable/app_icon"
         android:label="TV Key Mapper"
         android:roundIcon="@drawable/app_icon"

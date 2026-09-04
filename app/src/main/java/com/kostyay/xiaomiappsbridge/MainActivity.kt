@@ -5,7 +5,6 @@ import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
@@ -81,7 +80,7 @@ class MainActivity : Activity() {
                     addView(
                         actionButton("Stop bridge") {
                             stopService(BridgeService.intent(this@MainActivity))
-                            status.text = "Bridge stopped"
+                            status.setText(R.string.bridge_stopped)
                             showAdb(false)
                         },
                         margins(left = 16, width = 0, height = 82, weight = 1f)
@@ -117,7 +116,7 @@ class MainActivity : Activity() {
 
     override fun onStart() {
         super.onStart()
-        registerReceiver(statusReceiver, IntentFilter(BridgeService.ACTION_STATUS), RECEIVER_NOT_EXPORTED)
+        registerStatusReceiver(statusReceiver)
         mappingCount.text = mappingCountLabel()
     }
 

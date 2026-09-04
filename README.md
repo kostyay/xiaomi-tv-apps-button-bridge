@@ -56,7 +56,7 @@ Use the app's **Stop bridge** button if you must stop it.
 Install JDK 17 and Android SDK Platform 36. Then run:
 
 ```sh
-./gradlew assembleDebug
+make build
 ```
 
 The APK is at `app/build/outputs/apk/debug/app-debug.apk`.
@@ -100,11 +100,14 @@ TV can also report different key names.
 Run all source and Android checks:
 
 ```sh
-./gradlew ktlintCheck lintDebug testDebugUnitTest
+make lint
+./gradlew testDebugUnitTest
 ```
 
-Use `./gradlew ktlintFormat` to apply safe Kotlin formatting changes. The build
-workflow runs both checks before it creates the APK.
+Use `make fmt` (or `make fml`) to apply safe Kotlin formatting changes. Detekt
+checks complexity and maintainability. Android Lint checks API and resource
+use, and treats warnings as errors. The build workflow runs all checks before
+it creates the APK.
 
 ## License
 

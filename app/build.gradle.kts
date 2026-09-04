@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jlleitschuh.gradle.ktlint")
+    id("io.gitlab.arturbosch.detekt")
 }
 
 android {
@@ -35,12 +36,27 @@ android {
             signingConfig = signingConfigs.getByName("release")
         }
     }
+
+    lint {
+        disable += setOf(
+            "AndroidGradlePluginVersion",
+            "GradleDependency",
+            "NewerVersionAvailable"
+        )
+        warningsAsErrors = true
+    }
 }
 
 ktlint {
     version.set("1.8.0")
     android.set(true)
     outputToConsole.set(true)
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    config.setFrom(rootProject.files("config/detekt/detekt.yml"))
+    parallel = true
 }
 
 dependencies {
