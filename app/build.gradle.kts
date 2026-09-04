@@ -17,8 +17,23 @@ android {
         applicationId = "com.kostyay.xiaomiappsbridge"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "2.0.0"
+        versionCode = providers.gradleProperty("VERSION_CODE").getOrElse("2").toInt()
+        versionName = providers.gradleProperty("VERSION_NAME").getOrElse("2.0.0")
+    }
+
+    val releaseKeystore = providers.environmentVariable("RELEASE_KEYSTORE_PATH").orNull
+    if (releaseKeystore != null) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                storePassword = providers.environmentVariable("RELEASE_STORE_PASSWORD").get()
+                keyAlias = providers.environmentVariable("RELEASE_KEY_ALIAS").get()
+                keyPassword = providers.environmentVariable("RELEASE_KEY_PASSWORD").get()
+            }
+        }
+        buildTypes.getByName("release") {
+            signingConfig = signingConfigs.getByName("release")
+        }
     }
 }
 

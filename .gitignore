@@ -3,3 +3,5 @@
 local.properties
 **/build/
 output/
+*.jks
+*.keystore
