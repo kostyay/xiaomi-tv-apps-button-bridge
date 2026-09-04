@@ -5,9 +5,12 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.os.Build
+import android.content.IntentFilter
+import android.os.Build.VERSION.SDK_INT
+import android.os.Build.VERSION_CODES.TIRAMISU
 import android.os.IBinder
 import com.flyfishxu.kadb.Kadb
 import com.flyfishxu.kadb.cert.KadbCert
@@ -19,7 +22,17 @@ import okio.Path.Companion.toPath
 
 fun Context.startBridge(action: String? = null) {
     val intent = BridgeService.intent(this).setAction(action)
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent) else startService(intent)
+    startForegroundService(intent)
+}
+
+@Suppress("UnspecifiedRegisterReceiverFlag")
+fun Context.registerStatusReceiver(receiver: BroadcastReceiver) {
+    val filter = IntentFilter(BridgeService.ACTION_STATUS)
+    if (SDK_INT >= TIRAMISU) {
+        registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+    } else {
+        registerReceiver(receiver, filter)
+    }
 }
 
 class BridgeService : Service() {
@@ -68,10 +81,11 @@ class BridgeService : Service() {
         super.onDestroy()
     }
 
+    @Suppress("NestedBlockDepth", "TooGenericExceptionCaught")
     private fun listen() {
         while (!stopped) {
             try {
-                Kadb.create("127.0.0.1", 5555, connectTimeout = 5_000).use { adb ->
+                Kadb.create("127.0.0.1", ADB_PORT, connectTimeout = ADB_TIMEOUT_MS).use { adb ->
                     adb.shell("true")
                     updateStatus("Working: ${loadMappings().size} key mapping(s)", true)
                     adb.openShell("exec getevent -lt | grep ' EV_KEY '").use { shell ->
@@ -89,7 +103,7 @@ class BridgeService : Service() {
                 if (!stopped) {
                     updateStatus("Waiting for ADB: ${error.javaClass.simpleName}", false)
                     try {
-                        Thread.sleep(1_000)
+                        Thread.sleep(RETRY_DELAY_MS)
                     } catch (_: InterruptedException) {
                         return
                     }
@@ -130,7 +144,7 @@ class BridgeService : Service() {
     private fun runAction(key: String, mapping: KeyMapping) {
         val command = mapping.command() ?: return
         runCatching {
-            Kadb.create("127.0.0.1", 5555, connectTimeout = 5_000).use { adb ->
+            Kadb.create("127.0.0.1", ADB_PORT, connectTimeout = ADB_TIMEOUT_MS).use { adb ->
                 adb.shell(command)
             }
             updateStatus("Ran mapping for $key", true)
@@ -181,6 +195,9 @@ class BridgeService : Service() {
         const val MAPPINGS = "mappings"
         private const val CHANNEL_ID = "bridge"
         private const val NOTIFICATION_ID = 1
+        private const val ADB_PORT = 5555
+        private const val ADB_TIMEOUT_MS = 5_000
+        private const val RETRY_DELAY_MS = 1_000L
         private val KEY_EVENT = Regex("EV_KEY\\s+((?:KEY|BTN)_[A-Z0-9_]+)\\s+DOWN")
 
         fun intent(context: Context) = Intent(context, BridgeService::class.java)

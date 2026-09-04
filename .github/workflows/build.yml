@@ -15,7 +15,7 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v6
-      - run: ./gradlew ktlintCheck lintDebug testDebugUnitTest assembleDebug
+      - run: ./gradlew ktlintCheck detekt lintDebug testDebugUnitTest assembleDebug
       - uses: actions/upload-artifact@v7
         with:
           name: TVKeyMapper

@@ -1,0 +1,14 @@
+complexity:
+  LongMethod:
+    threshold: 100
+  LongParameterList:
+    functionThreshold: 7
+  TooManyFunctions:
+    thresholdInClasses: 16
+
+style:
+  MagicNumber:
+    excludes:
+      - '**/MainActivity.kt'
+      - '**/SettingsActivity.kt'
+      - '**/TvTheme.kt'

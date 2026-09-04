@@ -43,7 +43,7 @@ jobs:
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: >-
-          ./gradlew ktlintCheck lintRelease testReleaseUnitTest assembleRelease
+          ./gradlew ktlintCheck detekt lintRelease testReleaseUnitTest assembleRelease
           -PVERSION_NAME=${{ steps.version.outputs.name }}
           -PVERSION_CODE=${{ steps.version.outputs.code }}
       - name: Verify and package APK
