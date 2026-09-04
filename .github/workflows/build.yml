@@ -14,8 +14,8 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v6
-      - run: ./gradlew assembleDebug
+      - run: ./gradlew ktlintCheck lintDebug testDebugUnitTest assembleDebug
       - uses: actions/upload-artifact@v7
         with:
-          name: XiaomiAppsButtonBridge
+          name: TVKeyMapper
           path: app/build/outputs/apk/debug/app-debug.apk

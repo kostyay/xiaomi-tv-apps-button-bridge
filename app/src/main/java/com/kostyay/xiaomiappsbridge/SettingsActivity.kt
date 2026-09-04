@@ -6,7 +6,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
@@ -20,6 +19,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 
 class SettingsActivity : Activity() {
+    private val colors = TvTheme
     private lateinit var mappings: LinearLayout
     private var captureDialog: AlertDialog? = null
     private val statusReceiver = object : BroadcastReceiver() {
@@ -29,20 +29,27 @@ class SettingsActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mappings = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        setContentView(ScrollView(this).apply {
-            setBackgroundColor(BACKGROUND)
-            addView(LinearLayout(this@SettingsActivity).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(72, 42, 72, 42)
-                addView(label("KEY MAPPINGS", 13f, ORANGE, Typeface.BOLD))
-                addView(label("Remote button settings", 28f, TEXT, Typeface.BOLD), margins(top = 10))
-                addView(label("Select a mapping to change its action.", 15f, MUTED), margins(top = 6, bottom = 22))
-                addView(mappings)
-                addView(button("Add mapping", ::captureKey), margins(top = 22))
-                addView(button("What can I open?", ::showIntentHelp), margins(top = 14))
-                addView(button("Back", ::finish), margins(top = 14, bottom = 32))
-            })
-        })
+        setContentView(
+            ScrollView(this).apply {
+                setBackgroundColor(colors.BACKGROUND)
+                addView(
+                    LinearLayout(this@SettingsActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        setPadding(72, 42, 72, 42)
+                        addView(label("KEY MAPPINGS", 13f, colors.ORANGE, Typeface.BOLD))
+                        addView(label("Remote button settings", 28f, colors.TEXT, Typeface.BOLD), margins(top = 10))
+                        addView(
+                            label("Select a mapping to change its action.", 15f, colors.MUTED),
+                            margins(top = 6, bottom = 22)
+                        )
+                        addView(mappings)
+                        addView(button("Add mapping", ::captureKey), margins(top = 22))
+                        addView(button("What can I open?", ::showIntentHelp), margins(top = 14))
+                        addView(button("Back", ::finish), margins(top = 14, bottom = 32))
+                    }
+                )
+            }
+        )
         renderMappings()
     }
 
@@ -61,21 +68,29 @@ class SettingsActivity : Activity() {
         mappings.removeAllViews()
         val savedMappings = loadMappings()
         savedMappings.forEach { mapping ->
-            mappings.addView(LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                background = panel(CARD)
-                setPadding(22, 14, 14, 14)
-                addView(button("${mapping.key}  →  ${mapping.label}") { chooseAction(mapping.key) },
-                    LinearLayout.LayoutParams(0, 96, 1f))
-                addView(button("Delete") {
-                    removeMapping(mapping.key)
-                    renderMappings()
-                }, margins(left = 14, width = 210, height = 96))
-            }, margins(bottom = 12))
+            mappings.addView(
+                LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    background = panel(colors.CARD)
+                    setPadding(22, 14, 14, 14)
+                    addView(
+                        button("${mapping.key}  →  ${mapping.label}") { chooseAction(mapping.key) },
+                        LinearLayout.LayoutParams(0, 96, 1f)
+                    )
+                    addView(
+                        button("Delete") {
+                            removeMapping(mapping.key)
+                            renderMappings()
+                        },
+                        margins(left = 14, width = 210, height = 96)
+                    )
+                },
+                margins(bottom = 12)
+            )
         }
         if (savedMappings.isEmpty()) {
-            mappings.addView(label("No mappings", 19f, MUTED))
+            mappings.addView(label("No mappings", 19f, colors.MUTED))
         }
     }
 
@@ -107,8 +122,12 @@ class SettingsActivity : Activity() {
         val apps = packageManager.queryIntentActivities(launchIntent, 0)
             .filter { it.activityInfo.packageName != packageName }
             .map {
-                KeyMapping(key, it.loadLabel(packageManager).toString(), MappingKind.APP,
-                    action = it.activityInfo.packageName)
+                KeyMapping(
+                    key,
+                    it.loadLabel(packageManager).toString(),
+                    MappingKind.APP,
+                    action = it.activityInfo.packageName
+                )
             }
             .distinctBy { it.action }
             .sortedBy { it.label.lowercase() }
@@ -153,9 +172,13 @@ class SettingsActivity : Activity() {
                 val dataValue = data.text.toString().trim()
                 val componentValue = component.text.toString().trim()
                 val mapping = KeyMapping(
-                    key, listOf(actionValue, componentValue, dataValue).firstOrNull { it.isNotBlank() }
+                    key,
+                    listOf(actionValue, componentValue, dataValue).firstOrNull { it.isNotBlank() }
                         ?: "Custom intent",
-                    MappingKind.INTENT, actionValue, dataValue, componentValue
+                    MappingKind.INTENT,
+                    actionValue,
+                    dataValue,
+                    componentValue
                 )
                 if (mapping.command() != null) saveMapping(mapping)
                 renderMappings()
@@ -182,29 +205,28 @@ class SettingsActivity : Activity() {
 
     private fun field(hintText: String) = EditText(this).apply {
         hint = hintText
-        setHintTextColor(MUTED)
-        setTextColor(TEXT)
+        setHintTextColor(colors.MUTED)
+        setTextColor(colors.TEXT)
         textSize = 17f
         isSingleLine = true
     }
 
-    private fun label(value: String, size: Float, color: Int, style: Int = Typeface.NORMAL) =
-        TextView(this).apply {
-            text = value
-            textSize = size
-            setTextColor(color)
-            typeface = Typeface.create("sans-serif", style)
-        }
+    private fun label(value: String, size: Float, color: Int, style: Int = Typeface.NORMAL) = TextView(this).apply {
+        text = value
+        textSize = size
+        setTextColor(color)
+        typeface = Typeface.create("sans-serif", style)
+    }
 
     private fun button(value: String, action: () -> Unit) = Button(this).apply {
         text = value
         textSize = 16f
         isAllCaps = false
-        setTextColor(TEXT)
+        setTextColor(colors.TEXT)
         background = StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_focused), panel(ORANGE, 16f))
-            addState(intArrayOf(android.R.attr.state_pressed), panel(ORANGE, 16f))
-            addState(intArrayOf(), panel(BUTTON, 16f))
+            addState(intArrayOf(android.R.attr.state_focused), panel(colors.ORANGE, 16f))
+            addState(intArrayOf(android.R.attr.state_pressed), panel(colors.ORANGE, 16f))
+            addState(intArrayOf(), panel(colors.BUTTON, 16f))
         }
         setOnClickListener { action() }
     }
@@ -214,20 +236,6 @@ class SettingsActivity : Activity() {
         setColor(color)
     }
 
-    private fun margins(
-        left: Int = 0,
-        top: Int = 0,
-        width: Int = -1,
-        height: Int = -2,
-        bottom: Int = 0
-    ) = LinearLayout.LayoutParams(width, height).apply { setMargins(left, top, 0, bottom) }
-
-    companion object {
-        private val BACKGROUND = Color.rgb(10, 13, 18)
-        private val CARD = Color.rgb(23, 29, 39)
-        private val BUTTON = Color.rgb(39, 48, 63)
-        private val TEXT = Color.rgb(244, 247, 251)
-        private val MUTED = Color.rgb(157, 169, 187)
-        private val ORANGE = Color.rgb(255, 105, 0)
-    }
+    private fun margins(left: Int = 0, top: Int = 0, width: Int = -1, height: Int = -2, bottom: Int = 0) =
+        LinearLayout.LayoutParams(width, height).apply { setMargins(left, top, 0, bottom) }
 }

@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jlleitschuh.gradle.ktlint")
 }
 
 android {
@@ -19,6 +20,12 @@ android {
         versionCode = 2
         versionName = "2.0.0"
     }
+}
+
+ktlint {
+    version.set("1.8.0")
+    android.set(true)
+    outputToConsole.set(true)
 }
 
 dependencies {
