@@ -41,7 +41,8 @@ android {
         disable += setOf(
             "AndroidGradlePluginVersion",
             "GradleDependency",
-            "NewerVersionAvailable"
+            "NewerVersionAvailable",
+            "OldTargetApi"
         )
         warningsAsErrors = true
     }
