@@ -13,9 +13,9 @@ import com.flyfishxu.kadb.Kadb
 import com.flyfishxu.kadb.cert.KadbCert
 import com.flyfishxu.kadb.cert.OkioFilePrivateKeyStore
 import com.flyfishxu.kadb.shell.AdbShellPacket
-import okio.Path.Companion.toPath
 import java.io.File
 import java.util.concurrent.Executors
+import okio.Path.Companion.toPath
 
 fun Context.startBridge(action: String? = null) {
     val intent = BridgeService.intent(this).setAction(action)
@@ -26,9 +26,11 @@ class BridgeService : Service() {
     private val worker = Executors.newSingleThreadExecutor()
     private val controller = Executors.newSingleThreadExecutor()
     private val output = StringBuilder()
+
     @Volatile private var stopped = false
-    @Volatile private var testMode = false
-    @Volatile private var captureMode = false
+
+    @Volatile private var mode = Mode.NORMAL
+
     @Volatile private var listener: AutoCloseable? = null
 
     override fun onCreate() {
@@ -43,13 +45,13 @@ class BridgeService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_TEST) {
-            testMode = true
+            mode = Mode.TEST
             updateStatus("Test mode: press a mapped button")
         } else if (intent?.action == ACTION_CAPTURE) {
-            captureMode = true
+            mode = Mode.CAPTURE
             updateStatus("Press the remote button to map")
         } else if (intent?.action == ACTION_CANCEL_CAPTURE) {
-            captureMode = false
+            mode = Mode.NORMAL
             updateStatus("Key capture canceled")
         }
         return START_STICKY
@@ -110,17 +112,17 @@ class BridgeService : Service() {
     }
 
     private fun onKey(key: String) {
-        if (captureMode) {
-            captureMode = false
+        if (mode == Mode.CAPTURE) {
+            mode = Mode.NORMAL
             getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(CAPTURED_KEY, key).apply()
             updateStatus("Detected $key", true)
         } else {
             val mapping = loadMappings().firstOrNull { it.key == key } ?: return
-            if (!testMode) {
+            if (mode == Mode.NORMAL) {
                 controller.execute { runAction(key, mapping) }
                 return
             }
-            testMode = false
+            mode = Mode.NORMAL
             updateStatus("OK: $key detected", true)
         }
     }
@@ -183,4 +185,6 @@ class BridgeService : Service() {
 
         fun intent(context: Context) = Intent(context, BridgeService::class.java)
     }
+
+    private enum class Mode { NORMAL, TEST, CAPTURE }
 }

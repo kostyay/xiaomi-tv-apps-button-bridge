@@ -18,8 +18,10 @@ data class KeyMapping(
     fun command(): String? = when (kind) {
         MappingKind.PROJECTIVY ->
             "am start -a tv.projectivy.ALL_APPS -c ${Intent.CATEGORY_DEFAULT}"
+
         MappingKind.APP -> action.takeIf { it.matches(NAME) }
             ?.let { "monkey -p $it -c ${Intent.CATEGORY_LEANBACK_LAUNCHER} 1" }
+
         MappingKind.INTENT -> buildList {
             add("am start")
             action.takeIf { it.matches(NAME) }?.let { add("-a ${shellArg(it)}") }

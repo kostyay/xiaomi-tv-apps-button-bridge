@@ -11,6 +11,10 @@ default mapping is `KEY_CHAT` (the Xiaomi Apps button) to the Projectivy apps
 panel. **Test a mapped button** waits for one press and shows a result without
 opening its action.
 
+Key discovery is automatic. The app listens to all input devices and accepts
+all reported `KEY_*` and `BTN_*` names. It does not contain a list for Netflix,
+YouTube, or other remote brands.
+
 ![Key mapping settings](docs/key-mappings.png)
 
 Advanced users can enter a custom Android intent action, data URI, or exported
@@ -66,7 +70,20 @@ key, it runs the selected action. The default Projectivy target uses the
 
 This method observes input events but does not block the original TV action.
 Some mapped buttons can therefore do both the original action and the mapped
-action. A different TV can also report different key names.
+action. This also means that a branded app can cover the mapping screen during
+key capture. Return to TV Key Mapper to finish the saved mapping. A different
+TV can also report different key names.
+
+## Code checks
+
+Run all source and Android checks:
+
+```sh
+./gradlew ktlintCheck lintDebug testDebugUnitTest
+```
+
+Use `./gradlew ktlintFormat` to apply safe Kotlin formatting changes. The build
+workflow runs both checks before it creates the APK.
 
 ## License
 
